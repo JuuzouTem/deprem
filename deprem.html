@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deprem Stres Transferi Simülasyonu</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            line-height: 1.6;
+            padding: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        h1, h2 {
+            text-align: center;
+            color: #555;
+        }
+        .fault-map {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 30px auto;
+            padding: 20px;
+            background-color: #e0e0e0;
+            border-radius: 8px;
+            width: 80%;
+            max-width: 600px;
+            min-height: 150px; /* Yüksekliği koru */
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .fault-segment {
+            height: 100px;
+            border: 2px solid #555;
+            margin: 0 5px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            font-weight: bold;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            transition: background-color 1s ease, transform 0.5s ease; /* Geçiş efekti */
+        }
+        #segment-62 {
+            width: 30%;
+            /* Başlangıçta yüksek stres rengi */
+            background-color: #FF6347; /* Domates Rengi (Yüksek Stres) */
+        }
+        #segment-big-one {
+            width: 60%;
+            /* Başlangıçta çok yüksek stres rengi */
+            background-color: #DC143C; /* Koyu Kırmızı (Çok Yüksek Stres / Kilitli) */
+        }
+
+        /* Animasyon sınıfları */
+        .ruptured {
+            background-color: #90EE90 !important; /* Açık Yeşil (Stres Boşaldı) */
+            transform: scale(0.98); /* Hafifçe küçülme efekti */
+        }
+        .stressed-more {
+             background-color: #B22222 !important; /* Ateş Tuğlası Rengi (Daha da Yüksek Stres) */
+             animation: shake 0.5s; /* Sallanma efekti */
+        }
+
+        /* Sallanma animasyonu */
+        @keyframes shake {
+          0% { transform: translateX(0); }
+          25% { transform: translateX(-5px); }
+          50% { transform: translateX(5px); }
+          75% { transform: translateX(-5px); }
+          100% { transform: translateX(0); }
+        }
+
+        .controls {
+            text-align: center;
+            margin-top: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 1em;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        #status {
+            text-align: center;
+            margin-top: 20px;
+            font-weight: bold;
+            min-height: 2em; /* Durum mesajı için yer ayır */
+            color: #d9534f; /* Uyarı rengi */
+        }
+        .explanation {
+            margin-top: 30px;
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .explanation p {
+            margin-bottom: 10px;
+        }
+        .color-legend {
+            display: flex;
+            justify-content: center;
+            margin-top: 15px;
+            gap: 20px; /* Öğeler arası boşluk */
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+        }
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            margin-right: 8px;
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Marmara Fayı Stres Transferi Simülasyonu</h1>
+    <p style="text-align: center;">Bu simülasyon, 6.2'lik depremin beklenen büyük İstanbul depremi üzerindeki potansiyel etkisini basitleştirilmiş olarak gösterir.</p>
+
+    <div class="fault-map">
+        <div id="segment-62" class="fault-segment">
+            6.2 Depreminin Olduğu Bölge (Başlangıçta Stresli)
+        </div>
+        <div id="segment-big-one" class="fault-segment">
+            Büyük Depremin Beklendiği Kilitli Bölge (Çok Stresli)
+        </div>
+    </div>
+
+    <div class="color-legend">
+        <div class="legend-item">
+            <div class="legend-color" style="background-color: #FF6347;"></div> Yüksek Stres
+        </div>
+         <div class="legend-item">
+            <div class="legend-color" style="background-color: #DC143C;"></div> Çok Yüksek Stres (Kilitli)
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background-color: #B22222;"></div> Stres Arttı
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background-color: #90EE90;"></div> Stres Boşaldı
+        </div>
+    </div>
+
+    <div class="controls">
+        <button id="trigger-button">6.2 Depremini Simüle Et</button>
+    </div>
+
+    <div id="status">Simülasyonu başlatmak için butona tıklayın.</div>
+
+    <div class="explanation">
+        <h2>Açıklama</h2>
+        <p>Marmara Denizi'ndeki fay hattı farklı segmentlerden (parçalardan) oluşur. Büyük depremler genellikle uzun süredir kırılmayan ve enerji biriktiren "kilitli" segmentlerde meydana gelir.</p>
+        <ul>
+            <li><strong>Başlangıç Durumu:</strong> Hem 6.2'lik depremin olduğu bölge hem de büyük depremin beklendiği ana kilitli bölge belirli bir stres seviyesine sahiptir (Kırmızı tonları). Kilitli bölge daha fazla enerji biriktirmiştir.</li>
+            <li><strong>Simülasyon Anı:</strong> 6.2'lik deprem meydana geldiğinde, o segment üzerindeki birikmiş enerji (stres) boşalır (Yeşil renk). Ancak bu kırılma, hemen yanındaki kilitli ve kırılmaya hazır olan ana segmente <strong>ekstra bir yük (stres) bindirir</strong> (Daha koyu kırmızı renk ve sallanma efekti).</li>
+            <li><strong>Sonuç:</strong> 6.2'lik deprem, kendi olduğu yerde stresi azaltmış olsa da, enerjinin tamamını boşaltmaz ve daha önemlisi, büyük depremin beklendiği ana fay segmenti üzerindeki stresi artırarak, o segmentin kırılma olasılığını (veya zamanını) potansiyel olarak <strong>yakınlaştırabilir</strong>. Bu, fayın "rahatladığı" anlamına gelmez, aksine kritik bölgeye daha fazla yük bindiği anlamına gelir.</li>
+        </ul>
+    </div>
+
+    <script>
+        const segment62 = document.getElementById('segment-62');
+        const segmentBigOne = document.getElementById('segment-big-one');
+        const triggerButton = document.getElementById('trigger-button');
+        const statusDiv = document.getElementById('status');
+
+        // Başlangıç durumunu ayarla (CSS zaten yapıyor ama JS ile de kontrol edilebilir)
+        segment62.textContent = "6.2 Bölgesi (Stresli)";
+        segmentBigOne.textContent = "Büyük Deprem Bölgesi (Çok Stresli)";
+        statusDiv.textContent = "Başlangıç Durumu: Her iki bölge de stres altında.";
+        statusDiv.style.color = "#555"; // Normal renk
+
+        triggerButton.addEventListener('click', () => {
+            // 1. 6.2 depremi oluyor, o bölge rahatlıyor
+            statusDiv.textContent = "Simülasyon: 6.2 büyüklüğünde deprem meydana geliyor...";
+            statusDiv.style.color = "#007bff"; // Bilgi rengi
+
+            // Anlık görsel efektler
+            segment62.classList.add('ruptured'); // Yeşil yap ve hafif küçült
+            segment62.textContent = "6.2 Bölgesi (Stres Boşaldı)";
+
+            // 2. Komşu kilitli segmente stres transferi oluyor
+            // Küçük bir gecikmeyle stresi artır
+            setTimeout(() => {
+                segmentBigOne.classList.add('stressed-more'); // Daha kırmızı yap ve salla
+                segmentBigOne.textContent = "Büyük Deprem Bölgesi (Stres Arttı!)";
+                statusDiv.textContent = "SONUÇ: 6.2'nin olduğu yer rahatladı, ancak Büyük Deprem Bölgesine EKSTRA STRES BİNDİ!";
+                statusDiv.style.color = "#d9534f"; // Tehlike/Uyarı rengi
+            }, 1000); // 1 saniye sonra stres transferini göster
+
+            // Butonu devre dışı bırak
+            triggerButton.disabled = true;
+            triggerButton.textContent = "Simülasyon Tamamlandı";
+        });
+    </script>
+
+</body>
+</html>
